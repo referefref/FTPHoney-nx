@@ -23,12 +23,14 @@ func main() {
 	var help = flag.Bool("h",false,"Help menu.")
 
 	var lg = flag.Bool("log",false,"Write logs.")
+	// SQLite log file
+	var db = flag.String("db","./logs.db","SQLite log file.")
 	flag.Parse()
 
 	if (*help == true) {
 		help_m()
 	} else {
-		database,_ := sql.Open("sqlite3","./logs.db")
+		database,_ := sql.Open("sqlite3",*db)
 		show_options(*apc,*lc,*lg)
 		setdb(database)
 		hp(*lc,*h,*apc,database,*lg)
@@ -107,12 +109,22 @@ func handle_conn(database *sql.DB,conn net.Conn,id int, banner string, ps string
 		d := ctime()
 		h := conn.RemoteAddr()
 		hs := h.String()
-		usr := ss0[1]
-		pssk := ss1[1]
+		// Clients that disconnect early or send a command without an
+		// argument leave fewer than two fields; log what was received.
+		usr := field(ss0)
+		pssk := field(ss1)
 		loging(database,hs,d,usr,pssk)
 	}
 
 
+}
+
+// Argument of a received command line, without the line ending.
+func field(ss []string) string {
+	if (len(ss) < 2) {
+		return ""
+	}
+	return strings.TrimRight(strings.Join(ss[1:]," "),"\r\n")
 }
 
 // Set database.
@@ -159,6 +171,7 @@ func help_m() {
 	t.AddLine("-a","All tested password are correct.","No")
 	t.AddLine("-v","Show conections in verbose mode.","No")
 	t.AddLine("-log","Write logs.","No")
+	t.AddLine("-db","SQLite log file (default ./logs.db).","No")
 	t.AddLine("-h","Help menu.")
 	t.Print()
 }
