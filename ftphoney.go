@@ -31,6 +31,8 @@ func main() {
 		help_m()
 	} else {
 		database,_ := sql.Open("sqlite3",*db)
+		// One connection: concurrent writers otherwise get "database is locked"
+		database.SetMaxOpenConns(1)
 		show_options(*apc,*lc,*lg)
 		setdb(database)
 		hp(*lc,*h,*apc,database,*lg)
@@ -132,8 +134,10 @@ func field(ss []string) string {
 // columns: id,datetime, ip, username, password.
 func setdb(database *sql.DB) {
 	println("- Setting up database.")
-	state,_ := database.Prepare("CREATE TABLE IF NOT EXISTS frst (id INTEGER PRIMARY KEY,datetime TEXT,IP TEXT, username TEXT,password TEXT)")
-	state.Exec()
+	_, err := database.Exec("CREATE TABLE IF NOT EXISTS frst (id INTEGER PRIMARY KEY,datetime TEXT,IP TEXT, username TEXT,password TEXT)")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
 // Current date and time.
 func ctime() string {
@@ -144,8 +148,10 @@ func ctime() string {
 
 // Save information in database.
 func loging(database *sql.DB,host string,dt string,user string,passkey string) {
-	state,_ := database.Prepare("INSERT INTO frst (datetime,IP,username,password) VALUES (?,?,?,?)")
-	state.Exec(dt,host,user,passkey)
+	_, err := database.Exec("INSERT INTO frst (datetime,IP,username,password) VALUES (?,?,?,?)",dt,host,user,passkey)
+	if err != nil {
+		println("- Log error:",err.Error())
+	}
 }
 
 // Show chosen options.
